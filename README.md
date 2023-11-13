@@ -1,5 +1,3 @@
-# Learn Terraform Modules Create
+# AWS S3 static website bucket
 
-Learn what Terraform modules are and how to create one.
-
-This repo is a companion repo to the [Build a Module tutorial](https://developer.hashicorp.com/terraform/tutorials/modules/module-create).
+This module provisions AWS S3 buckets configured for static website hosting.

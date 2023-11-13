@@ -3,51 +3,72 @@
 
 # Terraform configuration
 
-provider "aws" {
-  region = "us-west-2"
+resource "aws_s3_bucket" "s3_bucket" {
+  bucket = var.bucket_name
+
+  tags = var.tags
 }
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.1.2"
+resource "aws_s3_bucket_website_configuration" "s3_bucket" {
+  bucket = aws_s3_bucket.s3_bucket.id
 
-  name = var.vpc_name
-  cidr = var.vpc_cidr
+  index_document {
+    suffix = "index.html"
+  }
 
-  azs             = var.vpc_azs
-  private_subnets = var.vpc_private_subnets
-  public_subnets  = var.vpc_public_subnets
-
-  enable_nat_gateway = var.vpc_enable_nat_gateway
-
-  tags = var.vpc_tags
-}
-
-module "ec2_instances" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
-  version = "5.5.0"
-
-  count = 2
-  name  = "my-ec2-cluster-${count.index}"
-
-  ami                    = "ami-0c5204531f799e0c6"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [module.vpc.default_security_group_id]
-  subnet_id              = module.vpc.public_subnets[0]
-
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
+  error_document {
+    key = "error.html"
   }
 }
 
-module "website_s3_bucket" {
-  source = "./modules/aws-s3-static-website-bucket"
+resource "aws_s3_bucket_ownership_controls" "s3_bucket" {
+  bucket = aws_s3_bucket.s3_bucket.id
 
-  bucket_name = "robin-test-dec-17-2019"
-
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
+  rule {
+    object_ownership = "BucketOwnerPreferred"
   }
+}
+
+resource "aws_s3_bucket_public_access_block" "s3_bucket" {
+  bucket = aws_s3_bucket.s3_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "s3_bucket" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.s3_bucket,
+    aws_s3_bucket_public_access_block.s3_bucket,
+  ]
+
+  bucket = aws_s3_bucket.s3_bucket.id
+
+  acl = "public-read"
+}
+
+resource "aws_s3_bucket_policy" "s3_bucket" {
+  depends_on = [
+    aws_s3_bucket_acl.s3_bucket
+  ]
+
+  bucket = aws_s3_bucket.s3_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource = [
+          aws_s3_bucket.s3_bucket.arn,
+          "${aws_s3_bucket.s3_bucket.arn}/*",
+        ]
+      },
+    ]
+  })
 }
