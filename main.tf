@@ -3,8 +3,13 @@
 
 # Terraform configuration
 
+module "aws" {
+  source  = "app.terraform.io/guillaume-org/aws/s3"
+  version = "1.0.0"
+}
+
 provider "aws" {
-  region = "us-west-2"
+  region = "eu-west-1"
 }
 
 module "vpc" {
@@ -27,7 +32,7 @@ module "ec2_instances" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.5.0"
 
-  count = 2
+  count = 1
   name  = "my-ec2-cluster-${count.index}"
 
   ami                    = "ami-0c5204531f799e0c6"
@@ -44,7 +49,7 @@ module "ec2_instances" {
 module "website_s3_bucket" {
   source = "./modules/aws-s3-static-website-bucket"
 
-  bucket_name = "robin-test-dec-17-2019"
+  bucket_name = "dfvkdfbiursdgvhsdfiuvgsdfiuvgsdfiuvbsdf"
 
   tags = {
     Terraform   = "true"
